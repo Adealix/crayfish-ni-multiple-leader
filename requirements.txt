@@ -1,0 +1,6 @@
+picamera2
+ultralytics
+supervision
+pyserial
+inference
+paho-mqtt

@@ -43,7 +43,12 @@ from ngrok_tunnel import ngrok_worker, get_tunnel_url
 from mqtt_monitor import mqtt_worker, publish as mqtt_publish
 import state as S
 
-app = Flask(__name__, static_folder="frontend")
+app = Flask(
+    __name__,
+    static_folder=os.path.join(os.path.dirname(__file__), "frontend", "static"),
+    static_url_path="/static"
+)
+
 FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "frontend")
 
 

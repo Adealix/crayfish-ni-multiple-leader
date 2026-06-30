@@ -302,8 +302,7 @@ def latest_snapshot():
             for field in (
                 "ph", "temp", "turbidity", "light_lux", "distance_cm",
                 "pump", "peltier", "air_pump", "filter_pump",
-                "rgb", "rgb_color", "rgb_brightness", "gsm_status", "mode",
-            ):
+                "rgb", "rgb_color", "rgb_brightness", "gsm_status"):
                 snapshot[field] = None
 
         in_memory_history = list(S.history)
@@ -484,6 +483,49 @@ def run_roboflow_detection(frame_bgr):
             "label":      str(item.get("class", "crayfish")),
         })
 
+    return scale_detections(
+        detections, orig_w, orig_h,
+        DETECTION_FRAME_WIDTH, DETECTION_FRAME_HEIGHT,
+    )
+
+
+def run_yolo_detection(frame_bgr):
+    """Run YOLOv8 detection using best.pt model"""
+    try:
+        from ultralytics import YOLO
+    except ImportError:
+        raise RuntimeError("ultralytics is not installed")
+    
+    if cv2 is None:
+        raise RuntimeError("opencv-python is not installed")
+    
+    from config import DETECTION_FRAME_WIDTH, DETECTION_FRAME_HEIGHT, ROBOFLOW_CONFIDENCE
+    
+    # Load model (cached after first load)
+    if not hasattr(run_yolo_detection, 'model'):
+        run_yolo_detection.model = YOLO('best.pt')
+    
+    model = run_yolo_detection.model
+    orig_h, orig_w = frame_bgr.shape[:2]
+    downsampled = downsample_frame(frame_bgr, DETECTION_FRAME_WIDTH, DETECTION_FRAME_HEIGHT)
+    
+    # Run inference
+    results = model(downsampled, conf=ROBOFLOW_CONFIDENCE)
+    
+    detections = []
+    for r in results:
+        for box in r.boxes:
+            x1, y1, x2, y2 = map(int, box.xyxy[0])
+            score = float(box.conf[0])
+            detections.append({
+                "x1": x1,
+                "y1": y1,
+                "x2": x2,
+                "y2": y2,
+                "confidence": round(score, 4),
+                "label": "crayfish"
+            })
+    
     return scale_detections(
         detections, orig_w, orig_h,
         DETECTION_FRAME_WIDTH, DETECTION_FRAME_HEIGHT,

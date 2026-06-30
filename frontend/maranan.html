@@ -1,1042 +1,127 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
- <meta charset="UTF-8" />
- <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
- <title>Crayfish IoT Dashboard</title>
- <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
- <style>
-   :root {
-     --bg-1: #f4efe8; --bg-2: #eef1ff; --bg-3: #ddefff;
-     --card: rgba(255,255,255,0.72); --card-border: rgba(255,255,255,0.65);
-     --text: #111827; --muted: #6b7280; --line: rgba(17,24,39,0.08);
-     --purple: #8b6df8; --purple-2: #6f52ff;
-     --green: #22c55e; --amber: #f59e0b; --rose: #ef4444; --teal: #2dd4bf;
-     --shadow: 0 20px 60px rgba(34,34,51,0.12);
-     --radius-card: 20px; --radius-btn: 12px;
-   }
-   * { box-sizing: border-box; margin: 0; padding: 0; }
-   body {
-     min-height: 100vh;
-     font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-     color: var(--text);
-     background:
-       radial-gradient(circle at 8% 15%, rgba(255,173,173,0.35), transparent 22%),
-       radial-gradient(circle at 82% 18%, rgba(162,146,255,0.20), transparent 18%),
-       radial-gradient(circle at 84% 82%, rgba(124,171,255,0.20), transparent 18%),
-       linear-gradient(135deg, var(--bg-1) 0%, var(--bg-2) 52%, var(--bg-3) 100%);
-     -webkit-font-smoothing: antialiased;
-   }
-   .wrap { max-width: 1500px; margin: 0 auto; padding: 20px; }
-   .shell {
-     background: rgba(255,255,255,0.45); border: 1px solid rgba(255,255,255,0.4);
-     border-radius: 28px; box-shadow: var(--shadow); backdrop-filter: blur(16px); overflow: hidden;
-   }
-
-   /* ── TOPBAR ── */
-   .topbar { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:18px 20px 10px; flex-wrap:wrap; }
-   .brand { display:flex; align-items:center; gap:12px; }
-   .mark { width:40px; height:40px; border-radius:14px; display:grid; place-items:center; background:linear-gradient(135deg,rgba(139,109,248,0.20),rgba(111,82,255,0.15)); color:var(--purple-2); font-size:20px; box-shadow:inset 0 1px 0 rgba(255,255,255,0.8); flex-shrink:0; }
-   .brand h1 { font-size:16px; letter-spacing:0.2px; line-height:1.2; }
-   .brand p  { font-size:12px; color:var(--muted); margin-top:2px; }
-   .tabs { display:flex; gap:4px; padding:5px; border-radius:999px; background:rgba(255,255,255,0.55); border:1px solid rgba(255,255,255,0.6); overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; flex-shrink:1; }
-   .tabs::-webkit-scrollbar { display:none; }
-   .tabs a { text-decoration:none; color:#4b5563; font-size:12px; padding:8px 12px; border-radius:999px; transition:0.2s ease; white-space:nowrap; }
-   .tabs a.active, .tabs a:hover { background:#fff; color:var(--text); box-shadow:0 4px 12px rgba(0,0,0,0.06); }
-   .tools { display:flex; align-items:center; gap:8px; flex-shrink:0; }
-   .icon-btn, .avatar { width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,0.78); border:1px solid rgba(255,255,255,0.65); display:grid; place-items:center; box-shadow:0 4px 12px rgba(0,0,0,0.06); color:#4b5563; font-size:15px; flex-shrink:0; }
-   .avatar { background:linear-gradient(135deg,#111827,#6f52ff); color:white; font-size:14px; }
-
-   /* ── HERO ── */
-   .hero { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; padding:8px 20px 14px; flex-wrap:wrap; }
-   .hero h2 { font-size:20px; font-weight:700; letter-spacing:-0.02em; }
-   .hero .sub { margin-top:4px; color:var(--muted); font-size:12px; }
-   .status-pill { display:inline-flex; align-items:center; gap:6px; padding:8px 12px; border-radius:999px; background:rgba(255,255,255,0.78); border:1px solid rgba(255,255,255,0.7); color:#374151; font-size:12px; white-space:nowrap; }
-   .status-dot { width:7px; height:7px; border-radius:50%; background:#22c55e; box-shadow:0 0 0 3px rgba(34,197,94,0.15); flex-shrink:0; }
-
-   /* ── STATS ── */
-   .stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; padding:0 20px 16px; }
-   .stat { background:var(--card); border:1px solid var(--card-border); box-shadow:0 8px 24px rgba(31,41,55,0.07); padding:14px; border-radius:16px; }
-   .stat-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
-   .stat-icon { width:36px; height:36px; border-radius:12px; display:grid; place-items:center; background:linear-gradient(135deg,rgba(139,109,248,0.18),rgba(111,82,255,0.08)); color:var(--purple-2); font-size:16px; flex-shrink:0; }
-   .stat .value { font-size:24px; font-weight:700; letter-spacing:-0.03em; }
-   .stat .label { margin-top:4px; font-size:12px; color:var(--muted); }
-   .stat .tag   { margin-top:8px; font-size:11px; color:#8b5cf6; display:inline-flex; align-items:center; gap:4px; }
-   .seg { display:inline-flex; align-items:center; gap:6px; font-size:11px; color:#6b7280; padding:6px 9px; border-radius:999px; background:rgba(255,255,255,0.62); border:1px solid rgba(255,255,255,0.65); white-space:nowrap; }
-
-   /* ── LAYOUT ── */
-   .layout { display:grid; grid-template-columns:minmax(0,1.9fr) minmax(300px,0.92fr); gap:14px; padding:0 20px 20px; }
-   .panel { background:var(--card); border:1px solid var(--card-border); border-radius:var(--radius-card); box-shadow:0 8px 24px rgba(31,41,55,0.07); overflow:hidden; }
-   .panel-hd { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px 16px 0; }
-   .panel-title { font-size:16px; font-weight:700; letter-spacing:-0.02em; }
-   .panel-sub   { margin-top:3px; font-size:12px; color:var(--muted); }
-   .panel-body  { padding:12px 16px 16px; }
-   .chart-wrap  { height:320px; }
-
-   /* ── MINI ROW ── */
-   .mini-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; }
-   .mini { border-radius:14px; padding:14px; background:linear-gradient(180deg,rgba(255,255,255,0.76),rgba(255,255,255,0.52)); border:1px solid rgba(255,255,255,0.72); }
-   .mini .k { color:var(--muted); font-size:11px; }
-   .mini .v { margin-top:6px; font-size:18px; font-weight:700; }
-   .side { display:grid; gap:14px; }
-
-   /* ── CAMERA ── */
-   .camera-panel { padding:16px; }
-   .camera-frame { margin-top:14px; border-radius:16px; overflow:hidden; background:rgba(17,24,39,0.06); border:1px solid rgba(255,255,255,0.75); aspect-ratio:16/9; }
-   .camera-frame img { width:100%; height:100%; object-fit:cover; display:block; }
-   .status-head { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
-   .badge { padding:6px 11px; border-radius:999px; font-size:11px; font-weight:700; white-space:nowrap; flex-shrink:0; }
-   .badge-purple { background:rgba(139,109,248,0.15); color:var(--purple-2); }
-   .badge-green  { background:rgba(34,197,94,0.15); color:#15803d; }
-   .badge-red    { background:rgba(239,68,68,0.15); color:#b91c1c; }
-   .badge-amber  { background:rgba(245,158,11,0.15); color:#92400e; }
-
-   /* ────────────────────────────────────────────────────────────────
-      ACTUATOR CONTROL PANEL
-      All buttons share the same height (44px), font, and radius.
-      Colour semantics:
-        Primary action  → solid dark  (.btn-solid)
-        Mode toggle     → uses .btn-mode-auto / .btn-mode-manual
-        ON  action      → solid green when active (.btn-on.is-active)
-        OFF action      → solid red   when active (.btn-off.is-active)
-        Inactive button → dimmed gray (.is-inactive)
-   ──────────────────────────────────────────────────────────────── */
-   .controls-panel { padding:16px; }
-
-   /* Mode selector strip */
-   .mode-strip { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px; }
-   .btn-mode {
-     height:44px; border:none; border-radius:var(--radius-btn); font-size:13px; font-weight:700;
-     cursor:pointer; transition:all 0.18s ease; letter-spacing:0.01em;
-     display:flex; align-items:center; justify-content:center; gap:7px;
-     -webkit-tap-highlight-color:transparent; touch-action:manipulation;
-   }
-   .btn-mode-auto  { background:rgba(255,255,255,0.7); color:#6b7280; border:1.5px solid rgba(17,24,39,0.10); }
-   .btn-mode-manual{ background:rgba(255,255,255,0.7); color:#6b7280; border:1.5px solid rgba(17,24,39,0.10); }
-   .btn-mode-auto.active  { background:linear-gradient(135deg,#6f52ff,#8b6df8); color:#fff; border-color:transparent; box-shadow:0 4px 16px rgba(111,82,255,0.35); }
-   .btn-mode-manual.active{ background:linear-gradient(135deg,#111827,#374151); color:#fff; border-color:transparent; box-shadow:0 4px 16px rgba(17,24,39,0.30); }
-   .btn-mode:active { transform:scale(0.97); }
-
-   /* Manual lock overlay — dims controls when AUTO is active */
-   .manual-zone { position:relative; transition:opacity 0.25s ease; }
-   .manual-zone.locked { opacity:0.42; pointer-events:none; }
-   .manual-zone.locked::after {
-     content:"Switch to Manual to control actuators";
-     position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-     font-size:12px; font-weight:600; color:#4b5563;
-     background:rgba(244,239,232,0.72); border-radius:14px; z-index:10;
-     pointer-events:none; padding:0 16px; text-align:center;
-   }
-
-   /* Section label inside controls */
-   .ctrl-label {
-     font-size:11px; font-weight:700; color:var(--muted); letter-spacing:0.06em;
-     text-transform:uppercase; margin:14px 0 8px; padding-bottom:6px;
-     border-bottom:1px solid rgba(17,24,39,0.06);
-   }
-
-   /* Actuator grid — two equal columns */
-   .act-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-
-   /* Base button — all action buttons share this */
-   .btn {
-     height:44px; border:none; border-radius:var(--radius-btn);
-     font-size:13px; font-weight:700; cursor:pointer;
-     transition:all 0.18s ease; letter-spacing:0.01em;
-     display:flex; align-items:center; justify-content:center; gap:6px;
-     -webkit-tap-highlight-color:transparent; touch-action:manipulation;
-     white-space:nowrap; overflow:hidden;
-   }
-   .btn:active { transform:scale(0.97); }
-   .btn:disabled { opacity:0.5; cursor:not-allowed; }
-
-   /* Variants */
-   .btn-on     { background:#16a34a; color:#fff; }
-   .btn-on:hover  { background:#15803d; }
-   .btn-off    { background:rgba(255,255,255,0.90); color:#374151; border:1.5px solid rgba(17,24,39,0.10); }
-   .btn-off:hover { background:#fff; }
-   .btn-warn   { background:linear-gradient(135deg,#f59e0b,#d97706); color:#fff; }
-   .btn-warn:hover { background:linear-gradient(135deg,#d97706,#b45309); }
-   .btn-danger { background:linear-gradient(135deg,#ef4444,#dc2626); color:#fff; }
-   .btn-danger:hover { background:linear-gradient(135deg,#dc2626,#b91c1c); }
-   .btn-purple { background:linear-gradient(135deg,#8b6df8,#6f52ff); color:#fff; }
-   .btn-purple:hover { background:linear-gradient(135deg,#6f52ff,#5a3ff0); }
-   .btn-neutral{ background:rgba(255,255,255,0.90); color:#374151; border:1.5px solid rgba(17,24,39,0.10); }
-   .btn-neutral:hover { background:#fff; }
-   .btn-full   { grid-column:span 2; }
-
-   /* Actuator active-state highlighting (Manual Mode) */
-   .btn-on.is-active    { background:#16a34a; color:#fff; box-shadow:0 4px 14px rgba(22,163,74,0.35); }
-   .btn-on.is-inactive   { background:rgba(148,163,184,0.22); color:#9ca3af; box-shadow:none; }
-   .btn-off.is-active   { background:linear-gradient(135deg,#ef4444,#dc2626); color:#fff; border-color:transparent; box-shadow:0 4px 14px rgba(220,38,38,0.30); }
-   .btn-off.is-inactive  { background:rgba(148,163,184,0.16); color:#9ca3af; border-color:rgba(148,163,184,0.16); box-shadow:none; }
-
-   /* RGB colour swatches */
-   .colour-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:7px; margin-top:4px; }
-   .btn-colour {
-     height:38px; border:none; border-radius:10px; font-size:11px; font-weight:700;
-     cursor:pointer; transition:all 0.18s; letter-spacing:0.01em;
-     display:flex; align-items:center; justify-content:center;
-     -webkit-tap-highlight-color:transparent;
-   }
-   .btn-colour:active { transform:scale(0.95); }
-   .btn-colour.active { box-shadow:0 0 0 2.5px #fff, 0 0 0 4.5px currentColor; }
-   .swatch-blue   { background:#3b82f6; color:#fff; }
-   .swatch-cyan   { background:#06b6d4; color:#fff; }
-   .swatch-purple { background:#8b5cf6; color:#fff; }
-   .swatch-white  { background:#f8fafc; color:#374151; border:1.5px solid rgba(17,24,39,0.12); }
-
-   /* Brightness slider */
-   .slider-row { display:flex; align-items:center; gap:10px; margin-top:10px; }
-   .slider-row input[type=range] { flex:1; accent-color:var(--purple-2); height:4px; cursor:pointer; }
-   .slider-label { font-size:12px; font-weight:700; color:#374151; min-width:34px; text-align:right; }
-
-   /* Stepper row */
-   .stepper-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-
-   /* GSM row */
-   .gsm-row { display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center; }
-
-   /* Raw line */
-   .raw { margin-top:12px; padding:11px 13px; border-radius:14px; background:rgba(255,255,255,0.72); border:1px solid rgba(255,255,255,0.7); color:#4b5563; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:11px; line-height:1.5; white-space:pre-wrap; word-break:break-word; }
-   .small-note { font-size:11px; color:var(--muted); margin-top:8px; }
-
-   /* ── GAUGE ── */
-   .status-box { padding:16px; }
-   .gauge-wrap { display:grid; place-items:center; margin-top:14px; padding:10px 0 0; }
-   .gauge { width:200px; aspect-ratio:1.4/1; position:relative; overflow:hidden; }
-   .arc { position:absolute; inset:0; border-radius:999px 999px 0 0; background:conic-gradient(from 180deg,#e5dfff 0deg,#d8ccff 26deg,#c4b2ff 52deg,#9f8cff 78deg,#7d67ff 106deg,#eceff3 106deg,#eceff3 180deg); -webkit-mask:radial-gradient(circle at 50% 100%,transparent 58%,#000 59%); mask:radial-gradient(circle at 50% 100%,transparent 58%,#000 59%); }
-   .arc::after { content:""; position:absolute; inset:22px; border-radius:999px 999px 0 0; background:rgba(255,255,255,0.9); -webkit-mask:radial-gradient(circle at 50% 100%,transparent 56%,#000 57%); mask:radial-gradient(circle at 50% 100%,transparent 56%,#000 57%); }
-   .gauge-center { position:absolute; left:50%; bottom:22%; transform:translateX(-50%); text-align:center; }
-   .gauge-center .pct { font-size:38px; line-height:1; font-weight:800; letter-spacing:-0.05em; }
-   .gauge-center .cap { margin-top:4px; color:var(--muted); font-size:11px; }
-   .meta { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:14px; }
-   .meta .item { background:rgba(255,255,255,0.7); border:1px solid rgba(255,255,255,0.7); border-radius:14px; padding:11px; }
-   .meta .item .t { font-size:11px; color:var(--muted); }
-   .meta .item .n { margin-top:5px; font-size:17px; font-weight:700; }
-
-   /* ── DB HISTORY ── */
-   .db-section { padding:0 20px 20px; }
-   .db-section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; gap:12px; flex-wrap:wrap; }
-   .db-section-header h3 { font-size:18px; font-weight:700; letter-spacing:-0.02em; }
-   .db-section-header p  { font-size:12px; color:var(--muted); margin-top:3px; }
-   .tab-switcher { display:flex; gap:4px; padding:4px; background:rgba(255,255,255,0.55); border:1px solid rgba(255,255,255,0.65); border-radius:999px; }
-   .tab-switcher button { border:0; background:transparent; cursor:pointer; padding:6px 14px; border-radius:999px; font-size:12px; color:var(--muted); font-weight:600; transition:0.2s; }
-   .tab-switcher button.active { background:white; color:var(--text); box-shadow:0 4px 10px rgba(0,0,0,0.08); }
-   .db-charts-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin-bottom:16px; }
-   .db-chart-card { background:var(--card); border:1px solid var(--card-border); border-radius:var(--radius-card); box-shadow:0 8px 24px rgba(31,41,55,0.07); overflow:hidden; }
-   .db-chart-card .panel-hd { padding:14px 14px 0; }
-   .db-chart-card .panel-body { padding:10px 14px 14px; }
-   .db-chart-mini { height:160px; }
-   .db-table-card { background:var(--card); border:1px solid var(--card-border); border-radius:var(--radius-card); box-shadow:0 8px 24px rgba(31,41,55,0.07); overflow:hidden; }
-   .db-table-card table { width:100%; border-collapse:collapse; }
-   .db-table-card th, .db-table-card td { padding:11px 14px; text-align:left; font-size:12px; border-top:1px solid rgba(17,24,39,0.05); vertical-align:middle; }
-   .db-table-card th { color:var(--muted); font-weight:600; background:rgba(255,255,255,0.22); white-space:nowrap; }
-   .db-table-card td { font-variant-numeric:tabular-nums; }
-   .db-table-card .table-header { padding:14px 16px 10px; }
-   .db-table-card .table-footer { padding:8px 16px 14px; color:var(--muted); font-size:11px; }
-   .db-table-panel { display:none; }
-   .db-table-panel.active { display:block; }
-   .table-scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; }
-
-   /* ── CHIPS ── */
-   .chip { display:inline-flex; align-items:center; gap:5px; padding:3px 8px; border-radius:999px; font-size:11px; font-weight:700; }
-   .chip-green  { background:rgba(34,197,94,0.14);  color:#15803d; }
-   .chip-red    { background:rgba(239,68,68,0.14);  color:#b91c1c; }
-   .chip-amber  { background:rgba(245,158,11,0.16); color:#92400e; }
-   .chip-purple { background:rgba(139,109,248,0.12); color:#5f47d6; }
-   .chip-blue   { background:rgba(45,212,191,0.14); color:#0d7a70; }
-   .chip-gray   { background:rgba(107,114,128,0.12); color:#4b5563; }
-   .health-good { color:#16a34a; font-weight:700; }
-   .health-fair { color:#d97706; font-weight:700; }
-   .health-poor { color:#dc2626; font-weight:700; }
-
-   /* ── EVENTS ── */
-   .events { margin:0 20px 20px; background:var(--card); border:1px solid var(--card-border); border-radius:var(--radius-card); box-shadow:0 8px 24px rgba(31,41,55,0.07); overflow:hidden; }
-   .events-head { padding:16px 16px 10px; display:flex; align-items:center; justify-content:space-between; gap:12px; }
-   .events table { width:100%; border-collapse:collapse; }
-   .events th, .events td { padding:12px 16px; text-align:left; font-size:12px; border-top:1px solid rgba(17,24,39,0.06); vertical-align:middle; }
-   .events th { color:var(--muted); font-weight:600; background:rgba(255,255,255,0.22); }
-   .kind { display:inline-flex; align-items:center; gap:6px; padding:5px 9px; border-radius:999px; font-size:11px; font-weight:700; background:rgba(139,109,248,0.12); color:#5f47d6; }
-   .kind.serial    { background:rgba(34,197,94,0.14);  color:#15803d; }
-   .kind.control   { background:rgba(245,158,11,0.16); color:#92400e; }
-   .kind.error     { background:rgba(239,68,68,0.14);  color:#b91c1c; }
-   .kind.detection { background:rgba(239,68,68,0.14);  color:#b91c1c; }
-   .kind.sms       { background:rgba(45,212,191,0.14); color:#0d7a70; }
-
-   /* ── PAGE CARDS ── */
-   .page-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-top:16px; }
-   .page-card { background:var(--card); border:1px solid var(--card-border); border-radius:var(--radius-card); padding:18px; min-height:168px; display:flex; flex-direction:column; justify-content:space-between; }
-   .page-card .label { color:var(--muted); font-size:12px; margin-top:8px; }
-   .page-card .value { margin-top:10px; font-size:28px; font-weight:700; line-height:1.1; }
-   .page-card .pin   { margin-top:12px; font-size:11px; color:#7c7c92; }
-
-   /* ── MOBILE NAV ── */
-   .mobile-nav { display:none; position:fixed; bottom:0; left:0; right:0; z-index:100; background:rgba(255,255,255,0.88); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border-top:1px solid rgba(17,24,39,0.08); padding:8px 0 max(8px,env(safe-area-inset-bottom)); }
-   .mobile-nav ul { list-style:none; display:flex; justify-content:space-around; }
-   .mobile-nav li a { display:flex; flex-direction:column; align-items:center; gap:3px; text-decoration:none; color:var(--muted); font-size:10px; font-weight:600; padding:4px 8px; -webkit-tap-highlight-color:transparent; transition:color 0.15s; }
-   .mobile-nav li a .ico { font-size:20px; line-height:1; }
-   .mobile-nav li a.active, .mobile-nav li a:hover { color:var(--purple-2); }
-   .section-anchor { scroll-margin-top:16px; }
-
-   /* ── RESPONSIVE ── */
-   @media (max-width:1100px) { .stats{grid-template-columns:repeat(2,minmax(0,1fr));} .layout{grid-template-columns:1fr;} .chart-wrap{height:260px;} .db-charts-grid{grid-template-columns:1fr 1fr;} }
-   @media (max-width:800px)  { .db-charts-grid{grid-template-columns:1fr;} }
-   @media (max-width:680px)  {
-     .wrap{padding:10px 10px 80px;} .shell{border-radius:20px;} .topbar{padding:14px 14px 8px;} .tabs,.tools{display:none;}
-     .hero{padding:6px 14px 12px;flex-direction:column;align-items:flex-start;gap:10px;} .hero h2{font-size:18px;}
-     .stats{grid-template-columns:1fr 1fr;gap:8px;padding:0 14px 12px;} .stat{padding:12px;} .stat .value{font-size:20px;} .stat .label{font-size:11px;} .stat .tag{display:none;}
-     .layout{padding:0 14px 14px;gap:12px;} .panel-hd{padding:14px 14px 0;} .panel-body{padding:10px 14px 14px;} .chart-wrap{height:220px;}
-     .mini-row{grid-template-columns:1fr 1fr;gap:8px;}
-     .gauge{width:170px;} .gauge-center .pct{font-size:32px;} .meta{gap:7px;} .meta .item .n{font-size:15px;}
-     .events{margin:0 14px 14px;} .events-head{padding:14px 14px 8px;} .events th,.events td{padding:10px 12px;}
-     .events th:nth-child(4),.events td:nth-child(4){display:none;}
-     .mobile-nav{display:block;} .db-section{padding:0 14px 14px;}
-     .db-table-card th:nth-child(n+5),.db-table-card td:nth-child(n+5){display:none;}
-     .colour-grid{grid-template-columns:repeat(4,1fr);}
-   }
-   @media (max-width:380px) { .stats{grid-template-columns:1fr;} .mini-row{grid-template-columns:1fr;} .act-grid{grid-template-columns:1fr;} .btn-full{grid-column:span 1;} .meta{grid-template-columns:1fr;} .stepper-row{grid-template-columns:1fr;} }
-   @media (prefers-reduced-motion:reduce) { .btn,.btn-mode,.btn-colour,.manual-zone{transition:none;} }
- </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>Crayfish Maranan Page</title>
+<link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-<div class="wrap">
- <div class="shell">
-
    <!-- TOPBAR -->
-   <div class="topbar">
-     <div class="brand">
-       <div class="mark">◉</div>
-       <div><h1>Crayfish IoT Dashboard</h1><p>Raspberry Pi live server</p></div>
-     </div>
-     <div class="tabs">
-       <a class="active" href="#Dashboard"    onclick="activatePage('Dashboard');return false;">Dashboard</a>
-       <a href="#Maranan"                     onclick="activatePage('Maranan');return false;">Maranan</a>
-       <a href="#Calungsod"                   onclick="activatePage('Calungsod');return false;">Calungsod</a>
-       <a href="#Canta"                       onclick="activatePage('Canta');return false;">Canta</a>
-       <a href="#Del%20Rosario"               onclick="activatePage('Del Rosario');return false;">Del Rosario</a>
-      <a href="#Garcia%20A."                 onclick="activatePage('Garcia A.');return false;">Garcia A.</a>
-       <a href="#Famini"                      onclick="activatePage('Famini');return false;">Famini</a>
-     </div>
-     <div class="tools">
-       <div class="icon-btn" title="Notifications">◍</div>
-       <div class="avatar"  title="Operator">RP</div>
-     </div>
-   </div>
-
-   <!-- HERO -->
-   <div class="hero" id="top">
-     <div>
-       <h2 id="greeting">Good day, Operator!</h2>
-       <div class="sub">Live monitoring of sensors, actuators, and feed system.</div>
-     </div>
-     <div class="status-pill">
-       <span class="status-dot"></span>
-       <span id="connStatus">Connection: Offline</span>
-       <span style="opacity:.4">•</span>
-       <span id="clock">--:--:--</span>
-     </div>
-   </div>
-
-   <!-- PAGE PANEL (non-Dashboard views) -->
-   <div class="panel section-anchor" id="pageSection" style="display:none;">
-     <div class="panel-hd">
-       <div>
-         <div class="panel-title" id="pageSectionTitle">Page</div>
-         <div class="panel-sub"  id="pageSectionSub">Six custom sensors and actuators.</div>
-       </div>
-       <div class="seg" id="pageSectionFlag">Custom view</div>
-     </div>
-     <div class="panel-body"><div class="page-grid" id="pageGrid"></div></div>
-   </div>
-
-   <!-- SENSOR GRID -->
-   <div class="stats section-anchor" id="sensors">
-     <div class="stat">
-       <div class="stat-top"><div class="stat-icon">🌞</div><div class="seg">Light</div></div>
-       <div class="value" id="luxValue">--</div>
-       <div class="label">BH1750 ambient lux</div><div class="tag">● Lighting</div>
-     </div>
-     <div class="stat">
-       <div class="stat-top"><div class="stat-icon">⚗</div><div class="seg">pH</div></div>
-       <div class="value" id="phValue">--</div>
-       <div class="label">Water quality</div><div class="tag">● Safe range 6.5–8.0</div>
-     </div>
-     <div class="stat">
-       <div class="stat-top"><div class="stat-icon">🌫️</div><div class="seg">Turbidity</div></div>
-       <div class="value" id="turbidityValue">--</div>
-       <div class="label">Water clarity</div><div class="tag">● Filtration</div>
-     </div>
-     <div class="stat">
-       <div class="stat-top"><div class="stat-icon">🌡️</div><div class="seg">Temp</div></div>
-       <div class="value" id="tempValue">--</div>
-       <div class="label">Water temperature</div><div class="tag">● Optimal 22–25°C</div>
-     </div>
-     <div class="stat">
-       <div class="stat-top"><div class="stat-icon">📷</div><div class="seg">Camera</div></div>
-       <div class="value" id="cameraValue">--</div>
-       <div class="label">Vision detection</div><div class="tag">● AI feed</div>
-     </div>
-     <div class="stat">
-       <div class="stat-top"><div class="stat-icon">📡</div><div class="seg">Presence</div></div>
-       <div class="value" id="distanceValue">--</div>
-       <div class="label">Ultrasonic distance</div><div class="tag">● Shelter occupancy</div>
-     </div>
-   </div>
-
-   <!-- MAIN LAYOUT -->
-   <div class="layout" id="dashboardLayout">
-
-     <!-- SENSOR TREND -->
-     <div class="panel">
-       <div class="panel-hd">
-         <div><div class="panel-title">Sensor Trend</div><div class="panel-sub">Live pH, temperature and turbidity history.</div></div>
-         <div class="seg">Live ▾</div>
-       </div>
-       <div class="panel-body">
-         <div class="chart-wrap"><canvas id="sensorChart"></canvas></div>
-         <div class="mini-row">
-           <div class="mini"><div class="k">Last updated</div><div class="v" id="updatedAt">--</div></div>
-           <div class="mini"><div class="k">System health</div><div class="v" id="healthLabel">--%</div></div>
-         </div>
-       </div>
-     </div>
-
-     <!-- SIDE COLUMN -->
-     <div class="side">
-
-       <!-- CAMERA -->
-       <div class="panel camera-panel section-anchor" id="camera">
-         <div class="status-head">
-           <div><div class="panel-title">Live Camera</div><div class="panel-sub">Raspberry Pi CSI video stream.</div></div>
-           <div class="badge badge-red" id="cameraBadge">OFFLINE</div>
-         </div>
-         <div class="camera-frame"><img src="/camera/feed" alt="Live camera feed" loading="lazy" /></div>
-         <div class="small-note" id="cameraText">Waiting for camera stream…</div>
-       </div>
-
-       <!-- ════════════════════════════════════════
-            ACTUATOR CONTROL PANEL
-       ════════════════════════════════════════ -->
-       <div class="panel controls-panel section-anchor" id="controls">
-
-         <!-- Header -->
-         <div class="status-head" style="margin-bottom:14px;">
-           <div>
-             <div class="panel-title">Actuator Control</div>
-             <div class="panel-sub">Select a mode, then operate actuators.</div>
-           </div>
-           <div class="badge badge-purple" id="modeBadge">AUTO</div>
-         </div>
-
-         <!-- Mode selector -->
-         <div class="mode-strip">
-           <button class="btn-mode btn-mode-auto active" id="btnModeAuto"
-                   onclick="setMode('AUTO')" title="Sensors drive all actuators automatically">
-             ⚙️ Automatic
-           </button>
-           <button class="btn-mode btn-mode-manual" id="btnModeManual"
-                   onclick="setMode('MANUAL')" title="Manually control each actuator">
-             🕹️ Manual
-           </button>
-         </div>
-
-         <!-- Manual controls (locked when AUTO) -->
-         <div class="manual-zone locked" id="manualZone">
-
-           <!-- Pumps & Peltier -->
-           <div class="ctrl-label">Pumps &amp; Peltier</div>
-           <div class="act-grid">
-<button class="btn btn-on"
-        id="btn-pump-ON"
-        onclick="setManualRelay('pump','ON')">
-    🚿 Filter Pump ON
-</button>
-              <button class="btn btn-off"
-        id="btn-pump-OFF"
-        onclick="setManualRelay('pump','OFF')">
-    Filter Pump OFF
-             </button>
-             <button class="btn btn-on"  id="btn-air_pump-ON"    onclick="setManualRelay('air_pump','ON')">💨 Air Pump ON</button>
-             <button class="btn btn-off" id="btn-air_pump-OFF"   onclick="setManualRelay('air_pump','OFF')">Air Pump OFF</button>
-             <button class="btn btn-on"  id="btn-peltier-ON"     onclick="setManualRelay('peltier','ON')">❄️ Peltier ON</button>
-             <button class="btn btn-off" id="btn-peltier-OFF"    onclick="setManualRelay('peltier','OFF')">Peltier OFF</button>
-           </div>
-
-           <!-- RGB Strip -->
-           <div class="ctrl-label">RGB Strip</div>
-           <div class="act-grid">
-             <button class="btn btn-on"  id="btn-rgb-ON"  onclick="setManualRelay('rgb','ON')">🌈 RGB ON</button>
-             <button class="btn btn-off" id="btn-rgb-OFF" onclick="setManualRelay('rgb','OFF')">RGB OFF</button>
-           </div>
-
-           <div class="colour-grid" style="margin-top:10px;" id="colourGrid">
-             <button class="btn-colour swatch-blue"   onclick="setRgbColour('blue')"   data-colour="blue">Blue</button>
-             <button class="btn-colour swatch-cyan"   onclick="setRgbColour('cyan')"   data-colour="cyan">Cyan</button>
-             <button class="btn-colour swatch-purple" onclick="setRgbColour('purple')" data-colour="purple">Purple</button>
-             <button class="btn-colour swatch-white"  onclick="setRgbColour('white')"  data-colour="white">White</button>
-           </div>
-
-           <div class="slider-row">
-             <span style="font-size:11px;color:var(--muted);">Brightness</span>
-             <input id="rgbSlider" type="range" min="0" max="100" value="60"
-                    oninput="document.getElementById('brightnessVal').innerText=this.value+'%'"
-                    onchange="setRgbBrightness(this.value)" />
-             <span class="slider-label" id="brightnessVal">60%</span>
-           </div>
-
-           <div class="mini-row" style="margin-top:10px;">
-             <div class="mini"><div class="k">RGB status</div><div class="v" id="rgbValue">--</div></div>
-             <div class="mini"><div class="k">Colour</div><div class="v" id="rgbColor">--</div></div>
-           </div>
-
-           <!-- Stepper Motor -->
-           <div class="ctrl-label">Stepper Motor</div>
-           <div class="stepper-row">
-             <button class="btn btn-warn" onclick="controlStepper('CW',4)">◀ Stepper CW</button>
-             <button class="btn btn-warn" onclick="controlStepper('CCW',4)">Stepper CCW ▶</button>
-           </div>
-
-           <!-- GSM / SMS -->
-           <div class="ctrl-label">GSM Module</div>
-           <div class="gsm-row">
-             <button class="btn btn-danger btn-full" onclick="sendGsmAlert()">📲 Send Test SMS Alert</button>
-             <div class="mini" style="min-width:72px;text-align:center;">
-               <div class="k">Status</div><div class="v" id="gsmStatus">--</div>
-             </div>
-           </div>
-
-         </div><!-- /manual-zone -->
-
-         <!-- ESP32 raw serial -->
-         <div class="ctrl-label" style="margin-top:16px;">ESP32 Serial</div>
-         <div class="raw" id="rawLine">Waiting for ESP32 serial data…</div>
-
-       </div><!-- /controls-panel -->
-
-       <!-- HEALTH GAUGE -->
-       <div class="panel status-box">
-         <div class="status-head">
-           <div><div class="panel-title">System Health</div><div class="panel-sub">Connection and sensor performance.</div></div>
-           <div class="badge badge-purple">Live</div>
-         </div>
-         <div class="gauge-wrap">
-           <div class="gauge">
-             <div class="arc"></div>
-             <div class="gauge-center">
-               <div class="pct" id="healthPct">--%</div>
-               <div class="cap">Overall health</div>
-             </div>
-           </div>
-         </div>
-         <div class="meta">
-           <div class="item"><div class="t">USB Serial</div><div class="n" id="serialStatus">--</div></div>
-           <div class="item"><div class="t">MQTT</div><div class="n" id="mqttStatus">--</div></div>
-         </div>
-       </div>
-
-     </div><!-- /side -->
-   </div><!-- /layout -->
-
-   <!-- DATABASE HISTORY -->
-   <div class="db-section section-anchor" id="db-history">
-     <div class="db-section-header">
-       <div>
-         <h3>📦 Database History</h3>
-         <p>All records persisted to MongoDB — sensor readings, actuator states, and SMS/GSM events.</p>
-       </div>
-       <div class="tab-switcher">
-         <button class="active" onclick="switchDbTab('sensor')">🌡 Sensor</button>
-         <button onclick="switchDbTab('actuator')">⚙️ Actuator</button>
-         <button onclick="switchDbTab('sms')">📱 SMS</button>
-       </div>
-     </div>
-
-     <div class="db-charts-grid">
-       <div class="db-chart-card">
-         <div class="panel-hd"><div><div class="panel-title" style="font-size:14px;">pH &amp; Temperature</div><div class="panel-sub">Last 10 DB records</div></div><div class="seg" style="font-size:10px;">MongoDB</div></div>
-         <div class="panel-body"><div class="db-chart-mini"><canvas id="dbPhTempChart"></canvas></div></div>
-       </div>
-       <div class="db-chart-card">
-         <div class="panel-hd"><div><div class="panel-title" style="font-size:14px;">Turbidity &amp; Light</div><div class="panel-sub">Last 10 DB records</div></div><div class="seg" style="font-size:10px;">MongoDB</div></div>
-         <div class="panel-body"><div class="db-chart-mini"><canvas id="dbTurbLuxChart"></canvas></div></div>
-       </div>
-       <div class="db-chart-card">
-         <div class="panel-hd"><div><div class="panel-title" style="font-size:14px;">Health &amp; Distance</div><div class="panel-sub">Last 10 DB records</div></div><div class="seg" style="font-size:10px;">MongoDB</div></div>
-         <div class="panel-body"><div class="db-chart-mini"><canvas id="dbHealthDistChart"></canvas></div></div>
-       </div>
-     </div>
-
-     <div class="db-table-panel active" id="dbPanel-sensor">
-       <div class="db-table-card">
-         <div class="table-header"><div class="panel-title" style="font-size:14px;">🌡 Sensor History</div><div class="panel-sub">Last 10 analog readings from <code>sensor_history</code>.</div></div>
-         <div class="table-scroll">
-           <table>
-             <thead><tr><th>Timestamp</th><th>pH</th><th>Temp (°C)</th><th>Turbidity (NTU)</th><th>Light (lux)</th><th>Distance (cm)</th><th>Health</th></tr></thead>
-             <tbody id="sensorHistoryBody"><tr><td colspan="7" style="color:#6b7280;padding:20px 16px;">Loading…</td></tr></tbody>
-           </table>
-         </div>
-         <div class="table-footer" id="sensorHistoryFooter">FIFO cap: 10 · MongoDB sensor_history</div>
-       </div>
-     </div>
-
-     <div class="db-table-panel" id="dbPanel-actuator">
-       <div class="db-table-card">
-         <div class="table-header"><div class="panel-title" style="font-size:14px;">⚙️ Actuator History</div><div class="panel-sub">Last 10 actuator snapshots from <code>actuator_history</code>.</div></div>
-         <div class="table-scroll">
-           <table>
-             <thead><tr><th>Timestamp</th><th>Mode</th><th>Pump</th><th>Air Pump</th><th>Filter Pump</th><th>Peltier</th><th>RGB</th><th>Colour</th><th>Brightness</th></tr></thead>
-             <tbody id="actuatorHistoryBody"><tr><td colspan="9" style="color:#6b7280;padding:20px 16px;">Loading…</td></tr></tbody>
-           </table>
-         </div>
-         <div class="table-footer">FIFO cap: 10 · MongoDB actuator_history</div>
-       </div>
-     </div>
-
-     <div class="db-table-panel" id="dbPanel-sms">
-       <div class="db-table-card">
-         <div class="table-header"><div class="panel-title" style="font-size:14px;">📱 SMS / GSM Events</div><div class="panel-sub">Last 10 GSM events from <code>sms_events</code>.</div></div>
-         <div class="table-scroll">
-           <table>
-             <thead><tr><th>Timestamp</th><th>Status</th><th>Detail</th></tr></thead>
-             <tbody id="smsHistoryBody"><tr><td colspan="3" style="color:#6b7280;padding:20px 16px;">Loading…</td></tr></tbody>
-           </table>
-         </div>
-         <div class="table-footer">FIFO cap: 10 · MongoDB sms_events</div>
-       </div>
-     </div>
-   </div>
-
-   <!-- LIVE EVENTS -->
-   <div class="events section-anchor" id="logs">
-     <div class="events-head">
-       <div><div class="panel-title">Recent Activity</div><div class="panel-sub">Latest serial lines and control actions (in-memory).</div></div>
-       <div class="seg">Live log</div>
-     </div>
-     <table>
-       <thead><tr><th style="width:100px;">Time</th><th style="width:100px;">Type</th><th>Title</th><th>Details</th></tr></thead>
-       <tbody id="eventsBody"><tr><td colspan="4" style="color:#6b7280;">No activity yet.</td></tr></tbody>
-     </table>
-   </div>
-
- </div><!-- /shell -->
-</div><!-- /wrap -->
-
-<!-- MOBILE NAV -->
-<nav class="mobile-nav" aria-label="Main navigation">
- <ul>
-   <li><a href="#Dashboard"    class="active" onclick="activatePage('Dashboard');return false;"><span class="ico">⊞</span>Dashboard</a></li>
-   <li><a href="#Maranan"      onclick="activatePage('Maranan');return false;"><span class="ico">⚗</span>Maranan</a></li>
-   <li><a href="#Calungsod"    onclick="activatePage('Calungsod');return false;"><span class="ico">🌫️</span>Calungsod</a></li>
-   <li><a href="#Canta"        onclick="activatePage('Canta');return false;"><span class="ico">🔧</span>Canta</a></li>
-   <li><a href="#Del%20Rosario" onclick="activatePage('Del Rosario');return false;"><span class="ico">🏷️</span>Del Rosario</a></li>
-  <li><a href="#Garcia%20A."  onclick="activatePage('Garcia A.');return false;"><span class="ico">💡</span>Garcia A.</a></li>
-   <li><a href="#Famini"       onclick="activatePage('Famini');return false;"><span class="ico">⭐</span>Famini</a></li>
- </ul>
-</nav>
-
+  <div class="topbar">
+    <div class="brand">
+      <div class="mark">◉</div>
+      <div><h1>Crayfish IoT Dashboard</h1><p>Raspberry Pi live server</p></div>
+    </div>
+    <div class="tabs">
+       <a class="active" href="/">Dashboard</a>
+      <a href="/maranan">Maranan</a>
+      <a href="/calungsod">Calungsod</a>
+      <a href="/canta">Canta</a>
+      <a href="/delrosario">Del Rosario</a>
+      <a href="/garcia">Garcia</a>
+      <a href="/famini">Famini</a>
+    </div>
+    <div class="tools">
+      <div class="icon-btn" title="Notifications">◍</div>
+      <div class="avatar"  title="Operator">RP</div>
+    </div>
+  </div>
+<div class="wrap">
+<div class="shell">
+  <div class="topbar">
+    <div class="brand"><div class="mark">⚗</div><div><h1>Maranan Control</h1><p>pH, Turbidity, Temperature</p></div></div>
+    <div class="tools" style="gap:8px;">
+      <button class="btn-mode btn-mode-auto active" id="btnModeAuto" onclick="setMode('AUTO')">AUTO</button>
+      <button class="btn-mode btn-mode-manual" id="btnModeManual" onclick="setMode('MANUAL')">MANUAL</button>
+      <a class="icon-btn" href="/" title="Back">◀</a>
+    </div>
+  </div>
+  <div class="hero" id="top">
+    <div><h2>Maranan Overview</h2><div class="sub">pH, Turbidity, Temperature with Air Pump, Filter Pump, and Peltier.</div></div>
+    <div class="status-pill"><span class="status-dot"></span><span id="connStatus">Connection: Offline</span><span style="opacity:.4">•</span><span id="clock">--:--:--</span></div>
+  </div>
+  <div class="stats" style="grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; padding:0 20px 16px;">
+    <div class="stat"><div class="stat-top"><div class="stat-icon">⚗</div><div class="seg">pH</div></div><div class="value" id="val-ph">--</div><div class="label">Water quality</div></div>
+    <div class="stat"><div class="stat-top"><div class="stat-icon">💨</div><div class="seg">Air Pump</div></div><div class="value" id="val-air">--</div><div class="label">Air pump state</div></div>
+    <div class="stat"><div class="stat-top"><div class="stat-icon">🌫️</div><div class="seg">Turbidity</div></div><div class="value" id="val-turb">--</div><div class="label">Water clarity</div></div>
+    <div class="stat"><div class="stat-top"><div class="stat-icon">🚿</div><div class="seg">Filter Pump</div></div><div class="value" id="val-pump">--</div><div class="label">Filter pump state</div></div>
+    <div class="stat"><div class="stat-top"><div class="stat-icon">🌡️</div><div class="seg">Temperature</div></div><div class="value" id="val-temp">--</div><div class="label">Water temperature</div></div>
+    <div class="stat"><div class="stat-top"><div class="stat-icon">❄️</div><div class="seg">Peltier</div></div><div class="value" id="val-pelt">--</div><div class="label">Peltier state</div></div>
+  </div>
+  <div class="panel controls-panel">
+    <div class="panel-hd"><div><div class="panel-title">Manual Controls</div><div class="panel-sub">Switch mode and operate actuators.</div></div><div class="badge badge-purple" id="modeBadge">AUTO</div></div>
+    <div class="panel-body">
+      <div class="manual-zone locked" id="manualZone">
+        <div class="ctrl-label">Air Pump</div>
+        <div class="act-grid">
+          <button class="btn btn-on" id="btn-air_pump-ON" onclick="setManualRelay('air_pump','ON')">💨 ON</button>
+          <button class="btn btn-off" id="btn-air_pump-OFF" onclick="setManualRelay('air_pump','OFF')">OFF</button>
+        </div>
+        <div class="ctrl-label">Filter Pump</div>
+        <div class="act-grid">
+          <button class="btn btn-on" id="btn-pump-ON" onclick="setManualRelay('pump','ON')">🚿 ON</button>
+          <button class="btn btn-off" id="btn-pump-OFF" onclick="setManualRelay('pump','OFF')">OFF</button>
+        </div>
+        <div class="ctrl-label">Peltier</div>
+        <div class="act-grid">
+          <button class="btn btn-on" id="btn-peltier-ON" onclick="setManualRelay('peltier','ON')">❄️ ON</button>
+          <button class="btn btn-off" id="btn-peltier-OFF" onclick="setManualRelay('peltier','OFF')">OFF</button>
+        </div>
+      </div>
+      <div class="mini-row" style="margin-top:16px;"><div class="mini"><div class="k">Mode</div><div class="v" id="modeDisplay">AUTO</div></div></div>
+    </div>
+  </div>
+</div>
+</div>
 <script>
-// ─── CHART INSTANCES ─────────────────────────────────────────────────────────
-let chart, dbPhTempChart, dbTurbLuxChart, dbHealthDistChart;
-
-// ─── CURRENT MODE STATE ───────────────────────────────────────────────────────
 let currentMode = 'AUTO';
-
-// ─── ACTUATOR BUTTON STATE ────────────────────────────────────────────────────
-const ACTUATOR_KEYS = ['pump','air_pump','peltier','rgb'];
-
-function updateActuatorButtons(key, state) {
-  const onBtn  = document.getElementById(`btn-${key}-ON`);
-  const offBtn = document.getElementById(`btn-${key}-OFF`);
-  if (!onBtn || !offBtn) return;
-  const isOn = String(state).toUpperCase() === 'ON';
-  onBtn.classList.toggle('is-active', isOn);
-  onBtn.classList.toggle('is-inactive', !isOn);
-  offBtn.classList.toggle('is-active', !isOn);
-  offBtn.classList.toggle('is-inactive', isOn);
-}
-function refreshAllActuatorButtons(data) {
-
-  // Do not let incoming MQTT data overwrite manual selections
-  if (currentMode === 'MANUAL')
-      return;
-
-  ACTUATOR_KEYS.forEach(k => {
-      if (data[k])
-          updateActuatorButtons(k, data[k]);
-  });
-}
-
-// ─── PAGE ROUTING ─────────────────────────────────────────────────────────────
-let activePage = 'Dashboard';
-const pageNames = ['Dashboard','Maranan','Calungsod','Canta','Del Rosario','Garcia A.','Famini'];
-
-const sensorMap = [
- { key:'ph',          label:'pH Sensor',          icon:'⚗',  unit:'',     pin:'GPIO34', type:'sensor' },
- { key:'turbidity',   label:'Turbidity Sensor',   icon:'🌫️', unit:' NTU', pin:'GPIO35', type:'sensor' },
- { key:'temp',        label:'Temperature Sensor', icon:'🌡️', unit:'°C',   pin:'GPIO32', type:'sensor' },
- { key:'light_lux',   label:'Light Sensor',       icon:'☀️', unit:' lux', pin:'GPIO33', type:'sensor' },
- { key:'distance_cm', label:'Distance Sensor',    icon:'📡', unit:' cm',  pin:'GPIO36', type:'sensor' },
-];
-const actuatorMap = [
-{ key:'pump',        label:'Filter Pump', icon:'🚿', unit:'', pin:'GPIO25', type:'actuator' },
-{ key:'air_pump',    label:'Air Pump',    icon:'💨', unit:'', pin:'GPIO26', type:'actuator' },
- { key:'peltier',     label:'Peltier',     icon:'❄️', unit:'', pin:'GPIO14', type:'actuator' },
- { key:'rgb',         label:'RGB Strip',   icon:'🌈', unit:'', pin:'GPIO13', type:'actuator' },
-];
-
-const PAGE_PAIRS = {
- Maranan: [
-   { sensor:{ key:'ph', label:'pH Sensor', icon:'⚗', unit:'', pin:'GPIO34', type:'sensor' }, actuator:{ key:'air_pump', label:'Air Pump', icon:'💨', unit:'', pin:'GPIO26', type:'actuator' } },
-   { sensor:{ key:'turbidity', label:'Turbidity Sensor', icon:'🌫️', unit:' NTU', pin:'GPIO35', type:'sensor' }, actuator:{ key:'pump', label:'Filter Pump', icon:'🚿', unit:'', pin:'GPIO25', type:'actuator' } },
-   { sensor:{ key:'temp', label:'DS18B20 Temperature Sensor', icon:'🌡️', unit:'°C', pin:'GPIO32', type:'sensor' }, actuator:{ key:'peltier', label:'Peltier Module', icon:'❄️', unit:'', pin:'GPIO14', type:'actuator' } },
- ],
-};
-
 function fmtValue(v, suffix='') { return (v===null||v===undefined||v==='') ? '--' : `${Number(v).toFixed(2)}${suffix}`; }
-function hashString(s) { let h=0; for(let i=0;i<s.length;i++){h=(h<<5)-h+s.charCodeAt(i);h|=0;} return h; }
-function stableShuffle(list, seed) {
- return list.slice().sort((a,b)=>{
-   const ah=hashString(`${seed}-${a.key}`), bh=hashString(`${seed}-${b.key}`);
-   return ah!==bh ? ah-bh : a.key.localeCompare(b.key);
- });
-}
-function getPageItems(page) {
- if (PAGE_PAIRS[page]) return PAGE_PAIRS[page];
- const s=stableShuffle(sensorMap,   `${page}-sensor`).slice(0,3);
- const a=stableShuffle(actuatorMap, `${page}-actuator`).slice(0,3);
- return [s[0],a[0],s[1],a[1],s[2],a[2]];
-}
-function activatePage(page) {
- activePage = pageNames.includes(page) ? page : 'Dashboard';
- const isDash = activePage === 'Dashboard';
- document.getElementById('pageSection').style.display     = isDash ? 'none'  : 'block';
- document.getElementById('sensors').style.display         = isDash ? 'grid'  : 'none';
- document.getElementById('dashboardLayout').style.display = 'grid';
- document.getElementById('db-history').style.display      = 'block';
- document.getElementById('logs').style.display            = 'block';
- document.getElementById('greeting').innerText = isDash ? greetText() : `${activePage} View`;
- document.querySelector('.hero .sub').innerText = isDash
-   ? 'Live monitoring of sensors, actuators, and feed system.'
-   : 'Three sensor-to-actuator pairs plus the shared dashboard sections.';
- window.location.hash = encodeURIComponent(activePage);
- document.querySelectorAll('.tabs a, .mobile-nav a').forEach(l=>{
-   l.classList.toggle('active', decodeURIComponent(l.getAttribute('href').replace('#','')) === activePage);
- });
- if (!isDash) renderPageCards(activePage);
-}
-function renderPageCards(page) {
- const items = getPageItems(page);
- const g = document.getElementById('pageGrid');
- g.innerHTML = '';
- items.forEach((pair,i)=>{
-   const c = document.createElement('div'); c.className='page-card';
-   c.innerHTML=`<div>
-     <div class="stat-top"><div class="stat-icon">${pair.sensor.icon}</div><div class="seg">${pair.sensor.label} → ${pair.actuator.label}</div></div>
-     <div class="value" id="pagePairLabel${i}">${pair.sensor.label} → ${pair.actuator.label}</div>
-     <div class="label">${pair.sensor.pin} → ${pair.actuator.pin}</div>
-     <div class="mini-row" style="margin-top:12px;">
-       <div class="mini"><div class="k">Sensor</div><div class="v" id="pageSensorValue${i}">--</div></div>
-       <div class="mini"><div class="k">Actuator</div><div class="v" id="pageActuatorValue${i}">--</div></div>
-     </div>
-   </div>`;
-   g.appendChild(c);
- });
- document.getElementById('pageSectionTitle').innerText = activePage;
- document.getElementById('pageSectionFlag').innerText  = '3 pair view';
- document.getElementById('pageSectionSub').innerText   = `Showing ${items.length} sensor-to-actuator pairs for ${activePage}.`;
-}
-function applyPageDataToPageSection(data) {
- if (activePage==='Dashboard') return;
- getPageItems(activePage).forEach((pair,i)=>{
-   const sensorEl=document.getElementById(`pageSensorValue${i}`);
-   const actuatorEl=document.getElementById(`pageActuatorValue${i}`);
-   if (sensorEl) sensorEl.innerText = (pair.sensor.key in data) ? fmtValue(data[pair.sensor.key], pair.sensor.unit) : '--';
-   if (actuatorEl) actuatorEl.innerText = (pair.actuator.key in data) ? (data[pair.actuator.key] || '--') : '--';
- });
-}
-
-// ─── MODE UI ──────────────────────────────────────────────────────────────────
-function applyModeUI(mode) {
- currentMode = mode;
- const isAuto   = mode === 'AUTO';
- const autoBtn  = document.getElementById('btnModeAuto');
- const manBtn   = document.getElementById('btnModeManual');
- const zone     = document.getElementById('manualZone');
- const badge    = document.getElementById('modeBadge');
-
- autoBtn.classList.toggle('active', isAuto);
- manBtn.classList.toggle('active',  !isAuto);
- zone.classList.toggle('locked',    isAuto);
-
- badge.innerText = mode;
- badge.className = isAuto ? 'badge badge-purple' : 'badge badge-amber';
-}
-
-// ─── FORMAT HELPERS ───────────────────────────────────────────────────────────
-function onOffChip(val) {
- if (!val||val==='--') return `<span class="chip chip-gray">--</span>`;
- return String(val).toUpperCase()==='ON'
-   ? `<span class="chip chip-green">● ON</span>`
-   : `<span class="chip chip-red">● OFF</span>`;
-}
-function modeChip(val) {
- if (!val||val==='--') return `<span class="chip chip-gray">--</span>`;
- return String(val).toUpperCase()==='AUTO'
-   ? `<span class="chip chip-purple">AUTO</span>`
-   : `<span class="chip chip-amber">MANUAL</span>`;
-}
-function healthChip(val) {
- if (val===null||val===undefined) return '--';
- const n=Number(val);
- const cls=n>=70?'health-good':n>=50?'health-fair':'health-poor';
- return `<span class="${cls}">${n}%</span>`;
-}
-function fmtNum(v,d=2,s='') { return (v===null||v===undefined)?'--':`${Number(v).toFixed(d)}${s}`; }
-function fmtTs(rec) {
- if (rec.timestamp) { try { return new Date(rec.timestamp).toLocaleString(); } catch(e){} }
- return rec.time||'--';
-}
-
-// ─── DB TAB ───────────────────────────────────────────────────────────────────
-function switchDbTab(tab) {
- ['sensor','actuator','sms'].forEach(t=>{
-   document.getElementById(`dbPanel-${t}`).classList.toggle('active',t===tab);
- });
- document.querySelectorAll('.tab-switcher button').forEach((btn,i)=>{
-   btn.classList.toggle('active',['sensor','actuator','sms'][i]===tab);
- });
-}
-
-// ─── DB CHARTS ────────────────────────────────────────────────────────────────
-function buildDbCharts(sensorHistory) {
- const records = [...sensorHistory].reverse();
- const labels  = records.map((r,i)=>r.time||String(i+1));
- const isMob   = window.innerWidth < 680;
- const baseScale = { grid:{display:false}, ticks:{color:'#6b7280',font:{size:9},maxRotation:0,maxTicksLimit:isMob?4:6} };
- const baseLegend = { position:'top', labels:{usePointStyle:true,boxWidth:7,color:'#374151',font:{size:10}} };
-
- const ctx1=document.getElementById('dbPhTempChart').getContext('2d');
- if (dbPhTempChart) dbPhTempChart.destroy();
- dbPhTempChart=new Chart(ctx1,{type:'line',data:{labels,datasets:[
-   {label:'pH',      data:records.map(r=>r.ph),   tension:0.3,borderWidth:2,borderColor:'#8b6df8',backgroundColor:'rgba(139,109,248,0.12)',fill:true,yAxisID:'y',  pointRadius:3},
-   {label:'Temp °C', data:records.map(r=>r.temp), tension:0.3,borderWidth:2,borderColor:'#22c55e',backgroundColor:'rgba(34,197,94,0.10)', fill:true,yAxisID:'y1', pointRadius:3}
- ]},options:{maintainAspectRatio:false,responsive:true,interaction:{mode:'index',intersect:false},plugins:{legend:baseLegend},
-   scales:{x:baseScale,y:{type:'linear',position:'left',min:0,max:14,ticks:{color:'#6b7280',font:{size:9}},grid:{color:'rgba(17,24,39,0.06)'}},y1:{type:'linear',position:'right',min:0,max:40,ticks:{color:'#6b7280',font:{size:9}},grid:{drawOnChartArea:false}}}}});
-
- const ctx2=document.getElementById('dbTurbLuxChart').getContext('2d');
- if (dbTurbLuxChart) dbTurbLuxChart.destroy();
- dbTurbLuxChart=new Chart(ctx2,{type:'line',data:{labels,datasets:[
-   {label:'Turbidity NTU',data:records.map(r=>r.turbidity), tension:0.3,borderWidth:2,borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,0.12)', fill:true,yAxisID:'y',  pointRadius:3},
-   {label:'Light lux',    data:records.map(r=>r.light_lux), tension:0.3,borderWidth:2,borderColor:'#2dd4bf',backgroundColor:'rgba(45,212,191,0.10)',  fill:true,yAxisID:'y1', pointRadius:3}
- ]},options:{maintainAspectRatio:false,responsive:true,interaction:{mode:'index',intersect:false},plugins:{legend:baseLegend},
-   scales:{x:baseScale,y:{type:'linear',position:'left',min:0,ticks:{color:'#6b7280',font:{size:9}},grid:{color:'rgba(17,24,39,0.06)'}},y1:{type:'linear',position:'right',min:0,ticks:{color:'#6b7280',font:{size:9}},grid:{drawOnChartArea:false}}}}});
-
- const ctx3=document.getElementById('dbHealthDistChart').getContext('2d');
- if (dbHealthDistChart) dbHealthDistChart.destroy();
- dbHealthDistChart=new Chart(ctx3,{type:'line',data:{labels,datasets:[
-   {label:'Health %',    data:records.map(r=>r.health),      tension:0.3,borderWidth:2,borderColor:'#6f52ff',backgroundColor:'rgba(111,82,255,0.12)',fill:true,yAxisID:'y',  pointRadius:3},
-   {label:'Distance cm', data:records.map(r=>r.distance_cm), tension:0.3,borderWidth:2,borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,0.10)', fill:true,yAxisID:'y1', pointRadius:3}
- ]},options:{maintainAspectRatio:false,responsive:true,interaction:{mode:'index',intersect:false},plugins:{legend:baseLegend},
-   scales:{x:baseScale,y:{type:'linear',position:'left',min:0,max:100,ticks:{color:'#6b7280',font:{size:9}},grid:{color:'rgba(17,24,39,0.06)'}},y1:{type:'linear',position:'right',min:0,ticks:{color:'#6b7280',font:{size:9}},grid:{drawOnChartArea:false}}}}});
-}
-
-// ─── TABLE RENDERS ────────────────────────────────────────────────────────────
-function renderSensorHistory(records) {
- const tbody=document.getElementById('sensorHistoryBody');
- if (!records||!records.length){tbody.innerHTML='<tr><td colspan="7" style="color:#6b7280;padding:20px 16px;">No sensor records in MongoDB yet.</td></tr>';return;}
- tbody.innerHTML=records.map(r=>`<tr>
-   <td style="white-space:nowrap;font-size:11px;">${fmtTs(r)}</td>
-   <td>${fmtNum(r.ph)}</td><td>${fmtNum(r.temp)}</td><td>${fmtNum(r.turbidity)}</td>
-   <td>${fmtNum(r.light_lux)}</td><td>${fmtNum(r.distance_cm)}</td><td>${healthChip(r.health)}</td></tr>`).join('');
- document.getElementById('sensorHistoryFooter').innerText=`${records.length} record${records.length!==1?'s':''} · FIFO cap: 10 · sensor_history`;
-}
-function renderActuatorHistory(records) {
- const tbody=document.getElementById('actuatorHistoryBody');
- if (!records||!records.length){tbody.innerHTML='<tr><td colspan="9" style="color:#6b7280;padding:20px 16px;">No actuator records in MongoDB yet.</td></tr>';return;}
- tbody.innerHTML=records.map(r=>`<tr>
-   <td style="white-space:nowrap;font-size:11px;">${fmtTs(r)}</td>
-   <td>${modeChip(r.mode)}</td><td>${onOffChip(r.pump)}</td><td>${onOffChip(r.air_pump)}</td>
-   <td>${onOffChip(r.filter_pump)}</td><td>${onOffChip(r.peltier)}</td><td>${onOffChip(r.rgb)}</td>
-   <td>${r.rgb_color?`<span class="chip chip-blue">${r.rgb_color}</span>`:'--'}</td>
-   <td>${(r.rgb_brightness!==null&&r.rgb_brightness!==undefined)?r.rgb_brightness+'%':'--'}</td></tr>`).join('');
-}
-function renderSmsHistory(records) {
- const tbody=document.getElementById('smsHistoryBody');
- if (!records||!records.length){tbody.innerHTML='<tr><td colspan="3" style="color:#6b7280;padding:20px 16px;">No SMS/GSM events in MongoDB yet.</td></tr>';return;}
- tbody.innerHTML=records.map(r=>`<tr>
-   <td style="white-space:nowrap;font-size:11px;">${fmtTs(r)}</td>
-   <td><span class="chip chip-blue">${r.status||'--'}</span></td>
-   <td style="font-family:ui-monospace,monospace;font-size:11px;color:#4b5563;max-width:320px;overflow-wrap:break-word;">${r.detail||'--'}</td></tr>`).join('');
-}
-
-// ─── LIVE SENSOR TREND CHART ──────────────────────────────────────────────────
-function buildChart(labels, phSeries, tempSeries, turbSeries) {
- const ctx=document.getElementById('sensorChart').getContext('2d');
- if (chart) chart.destroy();
- const isMob=window.innerWidth<680;
- chart=new Chart(ctx,{type:'line',data:{labels,datasets:[
-   {label:'pH',          data:phSeries,   tension:0.3,borderWidth:2.5,borderColor:'#8b6df8',backgroundColor:'rgba(139,109,248,0.14)',fill:true,yAxisID:'y',  pointRadius:isMob?2:3},
-   {label:'Temperature', data:tempSeries, tension:0.3,borderWidth:2.5,borderColor:'#22c55e',backgroundColor:'rgba(34,197,94,0.12)',  fill:true,yAxisID:'y1', pointRadius:isMob?2:3},
-   {label:'Turbidity',   data:turbSeries, tension:0.3,borderWidth:2.5,borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,0.12)', fill:true,yAxisID:'y2', pointRadius:isMob?2:3}
- ]},options:{maintainAspectRatio:false,responsive:true,interaction:{mode:'index',intersect:false},
-   plugins:{legend:{position:'top',labels:{usePointStyle:true,boxWidth:8,color:'#374151',font:{size:isMob?11:12}}}},
-   scales:{
-     x:{grid:{display:false},ticks:{color:'#6b7280',font:{size:isMob?9:11},maxRotation:0,maxTicksLimit:isMob?4:8}},
-     y:{type:'linear',position:'left',min:0,max:14,ticks:{color:'#6b7280',font:{size:isMob?9:11}},grid:{color:'rgba(17,24,39,0.06)'}},
-     y1:{type:'linear',position:'right',min:0,max:40,ticks:{color:'#6b7280',font:{size:isMob?9:11}},grid:{drawOnChartArea:false}},
-     y2:{type:'linear',position:'right',min:0,max:200,ticks:{display:false},grid:{drawOnChartArea:false}}
-   }}});
-}
-
-// ─── CONTROLS ─────────────────────────────────────────────────────────────────
 function sendControl(payload) {
- return fetch('/api/control',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
-   .then(r=>r.json())
-   .then(d=>{ if(d.state) applyState(d.state); })
-   .catch(console.warn);
+  return fetch('/api/control', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)})
+    .then(r=>r.json()).then(d=>{ if(d.state) applyState(d.state); }).catch(console.warn);
 }
-
-function setMode(m) {
- applyModeUI(m);          // instant UI feedback
- sendControl({mode:m});
+function applyModeUI(mode) {
+  currentMode = mode;
+  const disabled = mode === 'AUTO';
+  document.querySelectorAll('#manualZone button').forEach(btn => btn.disabled = disabled);
+  document.getElementById('btnModeAuto').classList.toggle('active', mode==='AUTO');
+  document.getElementById('btnModeManual').classList.toggle('active', mode==='MANUAL');
+  document.getElementById('manualZone').classList.toggle('locked', mode==='AUTO');
+  document.getElementById('modeBadge').innerText = mode;
+  document.getElementById('modeBadge').className = mode==='AUTO' ? 'badge badge-purple' : 'badge badge-amber';
+  document.getElementById('modeDisplay').innerText = mode;
 }
+function setMode(m) { applyModeUI(m); sendControl({mode:m}); }
 function setManualRelay(f,v) {
- if (v === 'ON' || v === 'OFF') updateActuatorButtons(f, v); // instant UI feedback — no waiting for next poll tick
- sendControl({[f]:v});
+  if (currentMode==='AUTO') return;
+  const onBtn=document.getElementById(`btn-${f}-ON`);
+  const offBtn=document.getElementById(`btn-${f}-OFF`);
+  if (onBtn && offBtn) {
+    const isOn = v==='ON';
+    onBtn.classList.toggle('is-active', isOn);
+    onBtn.classList.toggle('is-inactive', !isOn);
+    offBtn.classList.toggle('is-active', !isOn);
+    offBtn.classList.toggle('is-inactive', isOn);
+  }
+  sendControl({[f]:v});
 }
-function setRgbColour(c) {
- document.querySelectorAll('#colourGrid .btn-colour').forEach(b=>{
-   b.classList.toggle('active', b.dataset.colour===c);
- });
- sendControl({rgb_color:c});
-}
-function setRgbBrightness(l) { sendControl({rgb_brightness:Number(l)}); }
-function controlStepper(d,s) { sendControl({stepper_rotate:true,stepper_direction:d,stepper_rotations:s}); }
-function sendGsmAlert() { sendControl({gsm_alert:'TEST_ALERT'}); }
-
-// ─── APPLY STATE FROM SERVER ──────────────────────────────────────────────────
 function applyState(data) {
- document.getElementById('phValue').innerText        = fmtValue(data.ph,'');
- document.getElementById('tempValue').innerText      = fmtValue(data.temp,'°C');
- document.getElementById('luxValue').innerText       = fmtValue(data.light_lux,' lux');
- document.getElementById('turbidityValue').innerText = fmtValue(data.turbidity,' NTU');
- document.getElementById('distanceValue').innerText  = fmtValue(data.distance_cm,' cm');
- document.getElementById('cameraValue').innerText    = data.camera_connected ? `${data.detection?.count||0} detections` : 'Offline';
- document.getElementById('rgbValue').innerText       = data.rgb||'--';
- document.getElementById('rgbColor').innerText       = data.rgb_color||'--';
- document.getElementById('gsmStatus').innerText      = data.gsm_status||'--';
- document.getElementById('connStatus').innerText     = `Connection: ${data.connection_source||'Offline'}`;
- document.getElementById('serialStatus').innerText   = data.serial_connected ? 'Connected' : 'Disconnected';
- document.getElementById('mqttStatus').innerText     = data.mqtt_connected   ? 'Connected' : 'Disconnected';
- document.getElementById('rawLine').innerText        = data.serial_raw||'No ESP32 data yet';
-
- // Camera badge
- const camBadge=document.getElementById('cameraBadge');
- camBadge.innerText=data.camera_connected?'LIVE':'OFFLINE';
- camBadge.className=data.camera_connected?'badge badge-green':'badge badge-red';
-
- document.getElementById('cameraText').innerText = data.camera_connected
-   ? (data.detection?.last_error?`Stream active. Detection error: ${data.detection.last_error}`:`Stream active. Crayfish detected: ${data.detection?.count||0}`)
-   : (data.camera_error?`Camera unavailable: ${data.camera_error}`:'Camera stream not ready yet.');
-
- const health = data.health||0;
- document.getElementById('healthPct').innerText   = `${health}%`;
- document.getElementById('healthLabel').innerText = `${health}%`;
-
- const updated = data.updated_at ? new Date(data.updated_at*1000) : null;
- document.getElementById('updatedAt').innerText = updated
-   ? updated.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '--';
-
- // Sync brightness slider if it differs from server value
- if (data.rgb_brightness!==undefined) {
-   const slider=document.getElementById('rgbSlider');
-   if (document.activeElement!==slider) {
-     slider.value=data.rgb_brightness;
-     document.getElementById('brightnessVal').innerText=`${data.rgb_brightness}%`;
-   }
- }
-
- // Sync active colour swatch
- if (data.rgb_color) {
-   document.querySelectorAll('#colourGrid .btn-colour').forEach(b=>{
-     b.classList.toggle('active', b.dataset.colour===data.rgb_color);
-   });
- }
-
- // Actuator ON/OFF button highlighting
- if (currentMode === 'AUTO') {
-    refreshAllActuatorButtons(data);
+  document.getElementById('val-ph').innerText = fmtValue(data.ph);
+  document.getElementById('val-air').innerText = data.air_pump||'--';
+  document.getElementById('val-turb').innerText = fmtValue(data.turbidity,' NTU');
+  document.getElementById('val-pump').innerText = data.pump||'--';
+  document.getElementById('val-temp').innerText = fmtValue(data.temp,'°C');
+  document.getElementById('val-pelt').innerText = data.peltier||'--';
+  document.getElementById('connStatus').innerText = `Connection: ${data.connection_source||'Offline'}`;
+  document.getElementById('clock').innerText = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const serverMode=(data.mode||'AUTO').toUpperCase();
+  if (serverMode!==currentMode) applyModeUI(serverMode);
 }
-
- // Mode UI — only update if server disagrees with our local state
- const serverMode = String(data.mode || currentMode || 'AUTO').toUpperCase();
- if (serverMode !== currentMode && currentMode !== 'MANUAL') {
-   applyModeUI(serverMode);
- }
-
-} 
-
-// ─── MAIN REFRESH ─────────────────────────────────────────────────────────────
-async function refreshData() {
- try {
-   const res  = await fetch('/api/data');
-   const data = await res.json();
-   applyState(data);
-
-   // Live trend chart
-   const hist = data.history||[];
-   buildChart(
-     hist.map((r,i)=>r.time||String(i+1)),
-     hist.map(r=>r.ph),
-     hist.map(r=>r.temp),
-     hist.map(r=>r.turbidity)
-   );
-
-   // DB history
-   const sensorHist   = data.sensor_history   || [];
-   const actuatorHist = data.actuator_history || [];
-   const smsHist      = data.sms_history      || [];
-   renderSensorHistory(sensorHist);
-   renderActuatorHistory(actuatorHist);
-   renderSmsHistory(smsHist);
-   if (sensorHist.length) buildDbCharts(sensorHist);
-
-   applyPageDataToPageSection(data);
-
-   // Live events
-   const tbody=document.getElementById('eventsBody');
-   tbody.innerHTML='';
-   if (!data.events?.length) {
-     tbody.innerHTML='<tr><td colspan="4" style="color:#6b7280;">No activity yet.</td></tr>';
-   } else {
-     data.events.slice(0,10).forEach(ev=>{
-       const tr=document.createElement('tr');
-       tr.innerHTML=`<td>${ev.time||'--'}</td><td><span class="kind ${ev.kind||'serial'}">${(ev.kind||'serial').toUpperCase()}</span></td><td>${ev.title||'--'}</td><td>${ev.detail||'--'}</td>`;
-       tbody.appendChild(tr);
-     });
-   }
- } catch(e) { console.warn('Refresh error:',e); }
+async function refresh() {
+  try { const res = await fetch('/api/data'); const data = await res.json(); applyState(data); } catch(e) { console.warn(e); }
 }
-
-// ─── CLOCK ────────────────────────────────────────────────────────────────────
-function tickClock() { document.getElementById('clock').innerText=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'}); }
-
-function greetText() {
- const h=new Date().getHours();
- return h<12?'Good morning, Operator!':h<18?'Good afternoon, Operator!':'Good evening, Operator!';
-}
-function greetByTime() { if(activePage==='Dashboard') document.getElementById('greeting').innerText=greetText(); }
-
-// ─── INIT ─────────────────────────────────────────────────────────────────────
-const startPage = decodeURIComponent(window.location.hash.replace('#',''));
-activatePage(pageNames.includes(startPage) ? startPage : 'Dashboard');
-greetByTime();
-tickClock();
-refreshData();
-setInterval(refreshData, 2000);
-setInterval(tickClock,   1000);
+applyModeUI('AUTO'); refresh(); setInterval(refresh,5000);
 </script>
 </body>
 </html>
-

@@ -81,6 +81,38 @@ def dashboard():
     return send_from_directory(FRONTEND_DIR, "dashboard.html")
 
 
+@app.route("/maranan")
+def maranan():
+    return send_from_directory(FRONTEND_DIR, "maranan.html")
+
+
+@app.route("/calungsod")
+def calungsod():
+    return send_from_directory(FRONTEND_DIR, "calungsod.html")
+
+
+@app.route("/garcia")
+def garcia():
+    return send_from_directory(FRONTEND_DIR, "garcia.html")
+
+
+@app.route("/canta")
+def canta():
+    return send_from_directory(FRONTEND_DIR, "canta.html")
+
+
+@app.route("/delrosario")
+def delrosario():
+    return send_from_directory(FRONTEND_DIR, "delrosario.html")
+
+
+@app.route("/famini")
+def famini():
+    return send_from_directory(FRONTEND_DIR, "famini.html")
+
+
+
+
 @app.route("/latest")
 def latest():
     return jsonify(latest_snapshot())
@@ -88,6 +120,7 @@ def latest():
 
 @app.route("/api/data")
 def api_data():
+    print("CURRENT MODE API:", S.state["mode"]) 
     return jsonify(latest_snapshot())
 
 
@@ -184,6 +217,7 @@ def api_control():
             mode = str(data["mode"]).upper()
             if mode in ("AUTO", "MANUAL"):
                 S.state["mode"] = mode
+                print("MODE SET BY DASHBOARD:", S.state["mode"])
                 commands.append(f"MODE={mode}")
                 log_event("control", "Mode changed", f"Mode set to {mode}")
                 # The ESP32 tracks AUTO/MANUAL per actuator over MQTT, not over
@@ -206,12 +240,22 @@ def api_control():
         def _relay(key, serial_key=None):
             if key not in data:
                 return
-            if not manual_active:
+            serial_key = serial_key or key.upper()
+            raw = data[key]
+
+            if raw is True:
+                val = "ON"
+            elif raw is False:
+                val = "OFF"
+            else:
+                val = str(raw).upper()
+            esp32_name = ESP32_ACTUATOR.get(key)
+            
+            # Allow OFF commands to work in both AUTO and MANUAL modes (safety override)
+            # ON/TOGGLE commands still require MANUAL mode
+            if not manual_active and val != "OFF":
                 rejected.append(key)
                 return
-            serial_key = serial_key or key.upper()
-            val = str(data[key]).upper()
-            esp32_name = ESP32_ACTUATOR.get(key)
 
             if val in ("ON", "OFF"):
                 S.state[key] = val
@@ -275,8 +319,8 @@ def api_control():
                       f"Alert payload: {alert_msg}")
 
     # ── Send all commands to ESP32 over serial (logging / legacy path) ────────
-    for cmd in commands:
-        send_serial_command(cmd)
+    #for cmd in commands:
+       #send_serial_command(cmd)
 
     # ── Send all commands to ESP32 over MQTT (the path it actually listens to) ─
     for topic, payload in mqtt_messages:

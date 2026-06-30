@@ -4,3 +4,6 @@ supervision
 pyserial
 inference
 paho-mqtt
+flask
+python-dotenv
+pymongo
